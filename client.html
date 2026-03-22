@@ -1,52 +1,106 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>提交订单</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input, textarea { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+<title>订单查询</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f4f7;font-family:system-ui;padding:20px}
+.card{background:#fff;border-radius:16px;padding:22px;margin-bottom:15px}
+.title{font-size:20px;font-weight:bold;text-align:center}
+.warn{background:#fff1f0;color:#ff4d4f;padding:10px;border-radius:10px;text-align:center;margin-bottom:15px;font-weight:bold}
+input{width:100%;padding:14px;border:1px solid #ddd;border-radius:12px;margin-bottom:12px}
+button{width:100%;padding:14px;background:#007aff;color:white;border:none;border-radius:12px;font-weight:bold}
+.result{margin-top:16px;padding:14px;background:#f9f9f9;border-radius:12px;line-height:1.6}
+.result img{max-width:100%;max-height:220px;object-fit:contain;border-radius:10px;margin-top:10px}
+.history{margin-top:20px}
+.history .item{padding:10px;border-bottom:1px solid #eee}
+.bottom{text-align:center;padding:15px;color:#888;font-size:12px}
+</style>
 </head>
 <body>
-    <h1>提交新订单</h1>
-    <div class="form-group">
-        <label>姓名：</label>
-        <input type="text" id="name" placeholder="请输入您的姓名">
-    </div>
-    <div class="form-group">
-        <label>电话：</label>
-        <input type="tel" id="phone" placeholder="请输入您的电话">
-    </div>
-    <div class="form-group">
-        <label>订单内容：</label>
-        <textarea id="content" rows="5" placeholder="请输入订单内容"></textarea>
-    </div>
-    <button onclick="submitOrder()">提交订单</button>
 
-    <script>
-        function submitOrder() {
-            const name = document.getElementById("name").value.trim();
-            const phone = document.getElementById("phone").value.trim();
-            const content = document.getElementById("content").value.trim();
+<div class="card">
+  <div class="warn">未成年禁止下单</div>
+  <div class="title">订单进度查询</div>
+  <input id="orderId" placeholder="输入订单号">
+  <button onclick="search()">查询</button>
+  <div id="result" style="display:none" class="result"></div>
+</div>
 
-            if (!name || !phone || !content) {
-                alert("请填写完整信息！");
-                return;
-            }
+<div class="card">
+  <div class="title">我的历史订单</div>
+  <div id="history" class="history"></div>
+</div>
 
-            const order = { name, phone, content };
-            const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-            orders.push(order);
-            localStorage.setItem("orders", JSON.stringify(orders));
+<div class="bottom">
+  联系QQ：3400896857
+</div>
 
-            alert("提交成功！");
-            window.location.reload();
-        }
-    </script>
+<script>
+// 生成设备唯一ID
+function getDeviceId() {
+  let id = localStorage.getItem("deviceId");
+  if (!id) {
+    id = "device_" + Date.now() + Math.random().toString(36).substr(2,6);
+    localStorage.setItem("deviceId", id);
+  }
+  return id;
+}
+
+// 保存到历史
+function addToHistory(id) {
+  let hist = JSON.parse(localStorage.getItem("orderHistory")) || [];
+  if (!hist.includes(id)) {
+    hist.unshift(id);
+    localStorage.setItem("orderHistory", JSON.stringify(hist));
+  }
+  loadHistory();
+}
+
+// 加载历史
+function loadHistory() {
+  let hist = JSON.parse(localStorage.getItem("orderHistory")) || [];
+  let orders = JSON.parse(localStorage.getItem("orderList")) || {};
+  let h = document.getElementById("history");
+  h.innerHTML = "";
+  hist.forEach(id => {
+    let o = orders[id] || { status:"未查询到" };
+    h.innerHTML += `
+      <div class="item">
+        ${id}<br>
+        <small>状态：${o.status}</small>
+      </div>
+    `;
+  });
+}
+
+// 查询
+function search() {
+  let id = document.getElementById("orderId").value.trim();
+  let res = document.getElementById("result");
+  if (!id) { res.textContent="请输入订单号"; res.style.display="block"; return; }
+
+  let orders = JSON.parse(localStorage.getItem("orderList")) || {};
+  if (orders[id]) {
+    let o = orders[id];
+    res.innerHTML = `
+      订单号：${id}<br>
+      状态：${o.status}<br>
+      备注：${o.text||"无"}
+      ${o.img?`<br><img src="${o.img}">`:""}
+    `;
+    addToHistory(id);
+  } else {
+    res.textContent = "未找到该订单";
+  }
+  res.style.display = "block";
+}
+
+// 初始化
+getDeviceId();
+loadHistory();
+</script>
 </body>
-  </html>
+</html>
