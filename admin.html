@@ -1,52 +1,128 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理员后台</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .order-item { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-        .password-input { margin-bottom: 20px; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+<title>管理后台</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f4f7;font-family:system-ui;padding:15px}
+.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:15px}
+h3{text-align:center;margin-top:0}
+input,select,textarea,button{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #ddd}
+button{background:#007aff;color:white;border:none;font-weight:bold}
+.btn-del{background:#ff3b30}
+.btn-done{background:#06c16c}
+textarea{height:90px;resize:none}
+.preview{max-width:180px;max-height:180px;border-radius:10px;margin:10px 0;display:none}
+.item{padding:12px;border-bottom:1px solid #eee}
+.item img{max-width:80px;max-height:80px;border-radius:8px;margin-top:6px}
+.lock{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;align-items:center;justify-content:center;z-index:999}
+.bottom{text-align:center;padding:15px;color:#888;font-size:12px}
+</style>
 </head>
 <body>
-    <h1>订单管理后台</h1>
-    <div class="password-input">
-        <input type="password" id="adminPwd" placeholder="输入管理员密码">
-        <button onclick="checkPwd()">登录</button>
-    </div>
-    <div id="orderList" style="display: none;"></div>
 
-    <script>
-        const correctPwd = "114514";
-        function checkPwd() {
-            const pwd = document.getElementById("adminPwd").value;
-            if (pwd === correctPwd) {
-                document.getElementById("orderList").style.display = "block";
-                loadOrders();
-            } else {
-                alert("密码错误！");
-            }
-        }
+<div class="lock" id="lock">
+  <div style="width:80%;max-width:300px">
+    <h3>管理员登录</h3>
+    <input type="password" id="pwd" placeholder="请输入密码">
+    <button onclick="login()">确认</button>
+  </div>
+</div>
 
-        function loadOrders() {
-            const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-            const list = document.getElementById("orderList");
-            list.innerHTML = "<h2>当前订单</h2>" + orders.map((o, i) => `
-                <div class="order-item">
-                    <p>${o.name} - ${o.phone} - ${o.content}</p >
-                    <button onclick="deleteOrder(${i})">删除</button>
-                </div>
-            `).join("");
-        }
+<div id="admin" style="display:none">
+  <div class="card">
+    <h3>订单管理</h3>
+    <input id="orderId" placeholder="订单号">
+    <select id="status">
+      <option value="待处理">待处理</option>
+      <option value="处理中">处理中</option>
+      <option value="已完成">已完成</option>
+    </select>
+    <textarea id="text" placeholder="备注说明"></textarea>
+    <input type="file" id="img" accept="image/*">
+    <img id="preview" class="preview">
 
-        function deleteOrder(index) {
-            const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-            orders.splice(index, 1);
-            localStorage.setItem("orders", JSON.stringify(orders));
-            loadOrders();
-        }
-    </script>
+    <button onclick="save()">保存/修改</button>
+    <button class="btn-del" onclick="del()">删除订单</button>
+  </div>
+
+  <div class="card">
+    <h4>订单列表</h4>
+    <div id="list"></div>
+  </div>
+
+  <div class="bottom">
+    联系QQ：3400896857
+  </div>
+</div>
+
+<script>
+const PASSWORD = "114514";
+
+function login() {
+  if (document.getElementById("pwd").value === PASSWORD) {
+    document.getElementById("lock").style.display = "none";
+    document.getElementById("admin").style.display = "block";
+    load();
+  } else {
+    alert("密码错误");
+  }
+}
+
+function load() {
+  let orders = JSON.parse(localStorage.getItem("orderList")) || {};
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+  for (let id in orders) {
+    let o = orders[id];
+    list.innerHTML += `
+      <div class="item">
+        <strong>${id}</strong><br>
+        状态：${o.status}<br>
+        备注：${o.text || "无"}<br>
+        ${o.img ? `<img src="${o.img}">` : ""}
+      </div>
+    `;
+  }
+}
+
+function save() {
+  let id = document.getElementById("orderId").value.trim();
+  if (!id) { alert("请输入订单号"); return; }
+  let orders = JSON.parse(localStorage.getItem("orderList")) || {};
+  orders[id] = {
+    status: document.getElementById("status").value,
+    text: document.getElementById("text").value,
+    img: document.getElementById("preview").src || ""
+  };
+  localStorage.setItem("orderList", JSON.stringify(orders));
+  alert("保存成功");
+  load();
+}
+
+function del() {
+  let id = document.getElementById("orderId").value.trim();
+  if (!id) { alert("请输入要删除的订单号"); return; }
+  if (!confirm("确定删除？")) return;
+  let orders = JSON.parse(localStorage.getItem("orderList")) || {};
+  delete orders[id];
+  localStorage.setItem("orderList", JSON.stringify(orders));
+  alert("删除成功");
+  load();
+}
+
+document.getElementById("img").onchange = function (e) {
+  let r = new FileReader();
+  r.onload = () => {
+    let p = document.getElementById("preview");
+    p.src = r.result;
+    p.style.display = "block";
+  };
+  r.readAsDataURL(e.target.files[0]);
+};
+</script>
 </body>
-  </html>
+</html>
+
